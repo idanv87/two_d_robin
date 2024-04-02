@@ -10,7 +10,7 @@ import sys
 
 
 class CNN(nn.Module):
-    def __init__(self):
+    def __init__(self, f_dim):
         super(CNN, self).__init__()
         self.conv1 = nn.Sequential(         
             nn.Conv2d(
@@ -111,10 +111,11 @@ class Deeponet(nn.Module):
 
     def __init__(self, dim, f_dim):
         super().__init__()
+        self.f_dim=f_dim
         n_layers = 4
         branch_width=100
         trunk_width=100
-        self.cnn=CNN()
+        self.cnn=CNN(f_dim)
         # self.c1d=Conv1D()
         self.branch1 = fc(branch_width, branch_width, n_layers, activation_func=torch.nn.Tanh(),activation_last=False)
         self.branch2 = fc(branch_width, branch_width, n_layers, activation_func=torch.nn.Tanh(),activation_last=False)
@@ -123,7 +124,7 @@ class Deeponet(nn.Module):
         self.trunk1 = fc(dim, trunk_width,  n_layers, activation_func=torch.nn.Tanh(), activation_last=True)
         self.c2_layer =fc( branch_width*3, 1, n_layers, activation_func=torch.nn.Tanh(), activation_last=False)
 
-        self.cnn_c=CNN()
+        self.cnn_c=CNN(f_dim)
         self.branch1_c = fc(branch_width, branch_width, n_layers, activation_func=torch.nn.Tanh(),activation_last=False)
         # self.branch2 = fc(branch_width, branch_width, n_layers, activation_func=torch.nn.Tanh(),activation_last=False)
         self.trunk1_c = fc(dim, trunk_width,  n_layers, activation_func=torch.nn.Tanh(), activation_last=True)
@@ -131,7 +132,7 @@ class Deeponet(nn.Module):
 
     def forward(self, X):
         y,f=X 
-        f=torch.reshape(f,(f.size(0),1,9,18))
+        f=torch.reshape(f,(f.size(0),1,self.f_dim[0],self.f_dim[1]))
         # branch1 = self.branch1(self.c1d(g))
         branch1=self.branch1(self.cnn(torch.real(f.to(torch.cfloat))))
         branch2=self.branch1_c(self.cnn_c(torch.imag(f.to(torch.cfloat))))

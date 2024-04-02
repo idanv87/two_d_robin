@@ -3,6 +3,7 @@ import sys
 import math
 from matplotlib.ticker import ScalarFormatter
 
+import time
 
 from scipy.stats import qmc
 import matplotlib.pyplot as plt
@@ -29,31 +30,52 @@ from two_d_model import geo_deeponet, Deeponet
 
 
 
-def deeponet( G1, x_domain, y_domain):
+def deeponet( G1, x_domain, y_domain, side):
     int_points=np.vstack([x_domain,y_domain]).T
-    model_r=Deeponet(2,162)
-    model_c=Deeponet(2,162)
+    model_r=Deeponet(2,[10,19])
+    model_c=Deeponet(2,[10,19])
     experment_path=Constants.path+'runs/'
-    best_model=torch.load(experment_path+'2024.04.01.15.36.46best_model.pth')
-    model_c.load_state_dict(best_model['model_state_dict'])
-    
-    best_model=torch.load(experment_path+'2024.04.01.16.18.19best_model.pth')
-    model_r.load_state_dict(best_model['model_state_dict'])
+
+    if side:
+        # start_time = time.time()
+
+        best_model=torch.load(experment_path+'2024.04.02.13.07.30best_model.pth')
+        model_r.load_state_dict(best_model['model_state_dict']) 
+        best_model=torch.load(experment_path+'2024.04.02.13.12.34best_model.pth')
+        model_c.load_state_dict(best_model['model_state_dict']) 
+        # print("--- %s seconds ---" % (time.time() - start_time))
+    else:   
+        best_model=torch.load(experment_path+'2024.04.02.11.29.19best_model.pth')
+        model_r.load_state_dict(best_model['model_state_dict']) 
+        
+        best_model=torch.load(experment_path+'2024.04.02.11.51.21best_model.pth')
+        model_c.load_state_dict(best_model['model_state_dict']) 
     
 
-    x=np.linspace(0,0.5,10)
-    y=np.linspace(0,1,20)
-    domain=Rect(x,y)
-    xi=(domain.X).flatten()
-    yi=(domain.Y).flatten()
+    # best_model=torch.load(experment_path+'2024.04.01.16.18.19best_model.pth')
+    # model_r.load_state_dict(best_model['model_state_dict'])
+    # side 1
+
+
+    # side 0
+    
+
+    # x=np.linspace(0,0.5,10)
+    # y=np.linspace(0,1,20)
+    # domain=Rect(x,y)
+    # xi=(domain.X).flatten()
+    # yi=(domain.Y).flatten()
     
     # F=np.array(f_real(xi, yi))+1J*np.array(f_imag(xi, yi))
     F=G1
+    start_time = time.time()
     with torch.no_grad():
        
         y1=torch.tensor(int_points,dtype=torch.float32).reshape(int_points.shape)
-        a1=torch.tensor(F.reshape(1,F.shape[0]),dtype=torch.cfloat).repeat(y1.shape[0],1)
-        pred2=model_r([y1, a1])+0*model_c([y1, a1])
+        f=torch.tensor(F.reshape(1,F.shape[0]),dtype=torch.cfloat).repeat(y1.shape[0],1)
+        pred2=model_r([y1, f])+1J*model_c([y1, f])*0
+        # print("--- %s seconds ---" % (time.time() - start_time))
+        # pred2=model_r([y1, f])
     return pred2.numpy()
     # for j in range(len(x_domain)):
        

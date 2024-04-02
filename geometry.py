@@ -29,103 +29,107 @@ from scipy.sparse import csr_matrix, kron, identity
 from scipy.linalg import circulant
 
 
-
-def solve_subdomain(x,y,F,bc,l,side):
-    # X, Y = np.meshgrid(x[1:], y[1:-1], indexing='ij') 
-    # bc=np.cos(0.5)*np.sin(math.pi*y[1:-1])
-    # u=np.sin(X)*np.sin(math.pi*Y)
-    solver=rect_solver(x,y,l,side,bc)
-    M=solver.calc_D()
-    term=Constants.k* scipy.sparse.identity(M.shape[0])
-    G=solver.calc_bc()
-    # print((M@(u.flatten())+G-(-u-math.pi**2*u).flatten()).reshape((len(x)-1,len(y)-2)))
-    return scipy.sparse.linalg.spsolve(M+term, -G+F)
-
-class rect_solver:
-    def __init__(self,x,y,l,where,robin=None):
-        self.x=x
-        self.robin=robin
-        self.dx=x[1]-x[0]
-        self.dy=y[1]-y[0]
-        self.y=y
-        self.l=l
-        self.where=where
-        if self.where:
-            self.X, self.Y = np.meshgrid(x[1:], y[1:-1], indexing='ij')
-        else:
-            self.X, self.Y = np.meshgrid(x[:-1], y[1:-1], indexing='ij')
-            
-    def  calc_D_x(self):   
-        Nx = len(self.x[:-1])
-
-        
-        kernel = np.zeros((Nx, 1))
-        kernel[-1] = 1.
-        kernel[0] = -2.
-        kernel[1] = 1.
-        D2 = circulant(kernel).astype(complex)
-        D2[0, -1] = 0.
-        D2[-1, 0] = 0.
-        if self.where:
-            D2[-1,-1]=-2-2*self.dx*self.l
-            D2[-1,-2]=2
-        else:    
-            D2[0,0]=-2-2*self.dx*self.l
-            D2[0,1]=2
-
-        return D2/self.dx/self.dx
-    
-    def  calc_D_y(self):   
-
-        Ny= len(self.y[1:-1])
-        
-        kernel = np.zeros((Ny, 1))
-        kernel[-1] = 1.
-        kernel[0] = -2.
-        kernel[1] = 1.
-        D2 = circulant(kernel).astype(complex)
-        D2[0, -1] = 0.
-        D2[-1, 0] = 0.
-        return D2/self.dy/self.dy
-    
-    def calc_D(self):
-        return csr_matrix(kron(self.calc_D_x(), identity(len(self.y)-2)),dtype=np.cfloat)+csr_matrix(kron(identity(len(self.x)-1), self.calc_D_y()), dtype=np.cfloat)
-
-    
-    def calc_bc(self):
-        BC=(self.X*0).astype(complex)
-        for i in range(len(self.x[1:])):
-            for j in range(len(self.y[1:-1])):
-                if self.where:
-                    if abs(self.X[i,j]-self.x[-1])<1e-12:
-                            BC[i,j]=2*self.robin[j]/(self.dx)
-                            
-                else:   
-                    if abs(self.X[i,j]-self.x[0])<1e-12:
-                        BC[i,j]=-2*self.robin[j]/(self.dx) 
-        
-        return BC.flatten()       
-
-
 class Rect:
-    def __init__(self, x,y):
+    def __init__(self, x,y,side):
         self.x=x
         self.y=y
+        self.side=side
         self.dx=x[1]-x[0]
         self.dy=y[1]-y[0]
-        self.M_dir=csr_matrix(kron(self.dir_matrix(self.x), identity(len(self.y)-2)))+csr_matrix(kron(identity(len(self.x)-2), self.dir_matrix(self.y)))
-        self.X, self.Y = np.meshgrid(x[1:], y[1:-1], indexing='ij') 
-    def dir_matrix(self,x):
-        dx=x[1]-x[0]
-        Nx = len(x[1:-1])
-        kernel = np.zeros((Nx, 1))
-        kernel[-1] = 1.
-        kernel[0] = -2.
-        kernel[1] = 1.
-        D2 = circulant(kernel)
-        D2[0, -1] = 0.
-        D2[-1, 0] = 0.
-        return D2/dx/dx    
+        if self.side:
+            self.X, self.Y = np.meshgrid(x[1:], y[1:-1], indexing='ij') 
+        else:    
+            self.X, self.Y = np.meshgrid(x[:-1], y[1:-1], indexing='ij') 
+    # def dir_matrix(self,x):
+    #     dx=x[1]-x[0]
+    #     Nx = len(x[1:-1])
+    #     kernel = np.zeros((Nx, 1))
+    #     kernel[-1] = 1.
+    #     kernel[0] = -2.
+    #     kernel[1] = 1.
+    #     D2 = circulant(kernel)
+    #     D2[0, -1] = 0.
+    #     D2[-1, 0] = 0.
+    #     return D2/dx/dx   
+# def solve_subdomain(x,y,F,bc,l,side):
+#     # X, Y = np.meshgrid(x[1:], y[1:-1], indexing='ij') 
+#     # bc=np.cos(0.5)*np.sin(math.pi*y[1:-1])
+#     # u=np.sin(X)*np.sin(math.pi*Y)
+#     solver=rect_solver(x,y,l,side,bc)
+#     M=solver.calc_D()
+#     term=Constants.k* scipy.sparse.identity(M.shape[0])
+#     G=solver.calc_bc()
+#     # print((M@(u.flatten())+G-(-u-math.pi**2*u).flatten()).reshape((len(x)-1,len(y)-2)))
+#     return scipy.sparse.linalg.spsolve(M+term, -G+F)
+
+# class rect_solver:
+#     def __init__(self,x,y,l,where,robin=None, side=1):
+#         self.x=x
+#         self.side=side
+#         self.robin=robin
+#         self.dx=x[1]-x[0]
+#         self.dy=y[1]-y[0]
+#         self.y=y
+#         self.l=l
+#         self.where=where
+#         if self.where:
+#             self.X, self.Y = np.meshgrid(x[1:], y[1:-1], indexing='ij')
+#         else:
+#             self.X, self.Y = np.meshgrid(x[:-1], y[1:-1], indexing='ij')
+            
+#     def  calc_D_x(self):   
+#         Nx = len(self.x[:-1])
+
+        
+#         kernel = np.zeros((Nx, 1))
+#         kernel[-1] = 1.
+#         kernel[0] = -2.
+#         kernel[1] = 1.
+#         D2 = circulant(kernel).astype(complex)
+#         D2[0, -1] = 0.
+#         D2[-1, 0] = 0.
+#         if self.where:
+#             D2[-1,-1]=-2-2*self.dx*self.l
+#             D2[-1,-2]=2
+#         else:    
+#             D2[0,0]=-2-2*self.dx*self.l
+#             D2[0,1]=2
+
+#         return D2/self.dx/self.dx
+    
+#     def  calc_D_y(self):   
+
+#         Ny= len(self.y[1:-1])
+        
+#         kernel = np.zeros((Ny, 1))
+#         kernel[-1] = 1.
+#         kernel[0] = -2.
+#         kernel[1] = 1.
+#         D2 = circulant(kernel).astype(complex)
+#         D2[0, -1] = 0.
+#         D2[-1, 0] = 0.
+#         return D2/self.dy/self.dy
+    
+#     def calc_D(self):
+#         return csr_matrix(kron(self.calc_D_x(), identity(len(self.y)-2)),dtype=np.cfloat)+csr_matrix(kron(identity(len(self.x)-1), self.calc_D_y()), dtype=np.cfloat)
+
+    
+#     def calc_bc(self):
+#         BC=(self.X*0).astype(complex)
+#         for i in range(len(self.x[1:])):
+#             for j in range(len(self.y[1:-1])):
+#                 if self.where:
+#                     if abs(self.X[i,j]-self.x[-1])<1e-12:
+#                             BC[i,j]=2*self.robin[j]/(self.dx)
+                            
+#                 else:   
+#                     if abs(self.X[i,j]-self.x[0])<1e-12:
+#                         BC[i,j]=-2*self.robin[j]/(self.dx) 
+        
+#         return BC.flatten()       
+
+
+ 
 
         
     # def save(self, path):

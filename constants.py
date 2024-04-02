@@ -62,7 +62,7 @@ class Constants:
     test_path= path+'test_set/'
 
 
-    k=20
+    k=100
     l=1J*np.sqrt(k)
     h = 1/30
     batch_size=32

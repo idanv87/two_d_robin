@@ -36,14 +36,21 @@ def generate_data(names,  save_path, number_samples,seed=0):
         
     X=[]
     Y=[]
-    n=20
+    n=21
     x_0=np.linspace(0,1,n)
     y_0=np.linspace(0,1,n)
-    x=x_0[:int(0.5*(n-1))+1]
-    y=y_0
+    side=1
+    # left rect side=1
+    if side:
+        x=x_0[:int(0.5*(n-1))+1]
+        y=y_0
+    else:
+        x=x_0[int(0.5*(n-1)):]
+        y=y_0
+    
     for name in enumerate(names):
         l=Constants.l
-        domain=Rect(x,y)
+        domain=Rect(x,y,side)
         xi=(domain.X).flatten()
         yi=(domain.Y).flatten()
         f=grf(xi, number_samples,seed=seed )
@@ -51,19 +58,22 @@ def generate_data(names,  save_path, number_samples,seed=0):
         
         g1=grf(y[1:-1], number_samples,seed=1 )
         g2=grf(y[1:-1], number_samples,seed=2 )
-        g=(g1-Constants.l*g2)
-        
+        if side:
+            g=(g1-Constants.l*g2)
+        else:       
+            g=(g1+Constants.l*g2)
+            
         for i in range(number_samples):
-            ROB1=g[i]
+            ROB=g[i]
             # G1=f[i]+1J*f1[i]
-            A1,G1=solve_subdomain2(domain.x,domain.y,f[i],ROB1,l=Constants.l, side=1)
-            s1=scipy.sparse.linalg.spsolve(A1, G1)*100
+            A,G=solve_subdomain2(domain.x,domain.y,f[i],ROB,l=Constants.l, side=side)
+            s1=scipy.sparse.linalg.spsolve(A, G)
             for j in range(len(xi)):
                 X1=[
                     torch.tensor([xi[j],yi[j]], dtype=torch.float32),
-                    torch.tensor(G1, dtype=torch.cfloat),
+                    torch.tensor(G, dtype=torch.cfloat)
                     ]
-                Y1=torch.tensor((s1[j].real), dtype=torch.cfloat)
+                Y1=torch.tensor((s1[j].imag), dtype=torch.cfloat)
                 save_uniqe([X1,Y1],save_path)
                 X.append(X1)
                 Y.append(Y1)
@@ -73,6 +83,7 @@ def generate_data(names,  save_path, number_samples,seed=0):
 # 
 
 if __name__=='__main__':
+    # pass
 # if False:
     X,Y=generate_data(names, Constants.train_path, number_samples=300, seed=0)
 
@@ -128,8 +139,8 @@ test_dataloader=create_loader(test_dataset, batch_size=4, shuffle=False, drop_la
 inp, out=next(iter(test_dataset))
 
 # model=geo_deeponet( 2, inp[1].shape[0], inp[2].shape[0],inp[4].shape[0])
-
-model=Deeponet( 2, inp[1].shape[0])
+# 9,18 or 10,18
+model=Deeponet( 2, [10,19])
 
 inp, out=next(iter(test_dataloader))
 model(inp)
